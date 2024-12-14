@@ -1,78 +1,126 @@
 <template>
-    <div class="h5-page">
-        <div style="margin: 10vh;">
-            <!-- 文件选择 -->
-            <input type="file" @change="onFileChange" />
-            <div>
-            <label for="aspect-ratio">选择裁剪比例:</label>
-            <select id="aspect-ratio" v-model="aspectRatio" @change="updateAspectRatio">
-                <option value="null">自由裁剪</option>
-                <option value="1">1:1</option>
-                <option value="16/9">16:9</option>
-                <option value="1560/1440">1560x1440</option>
-            </select>
-            </div>
-            <div class="cropper-container">
-                <VueCropper
-                v-if="image"
-                ref="cropper"
-                :src="image"
-                :view-mode="1"
-                :drag-mode="'crop'"
-                :aspect-ratio="aspectRatio"
-                :auto-crop-area="1"
-                :movable="true"
-                :zoomable="true"
-                :scalable="true"
-                :rotatable="true"
-                :crop-box-movable="true"
-                :crop-box-resizable="true"
-                @cropmove="onCropMove">
-                </VueCropper>
-                    
-            </div>
-            <div>
-                <button @click="cropImage">裁剪图片</button>
-                <button @click="resetCropper">重置裁剪框</button>
-            </div>
-            <div v-if="croppedImage">
-                <h3>裁剪后的图片：</h3>
-                <div class="cropper-container">
-                    <img :src="croppedImage" alt="裁剪后的图片" />
-                </div>
-            </div>
+  <div class="h5-page">
+    <div style="margin: 5vh">
+      <!-- 文件选择 -->
+      <el-upload
+        class="upload-demo"
+        action="https://run.mocky.io/v3/9d059bf9-4660-45f2-925d-ce80ad6c4d15"
+        :before-upload="handleBeforeUpload"
+        :show-file-list="true"
+        :limit="1"
+        accept="image/*"
+      >
+        <el-button type="primary">选择图片</el-button>
+      </el-upload>
+
+      <div style="margin-bottom: 2vh">
+        <label for="aspect-ratio">选择裁剪比例:</label>
+        <el-select
+          v-model="aspectRatio"
+          placeholder="选择"
+          size="small"
+          style="width: 240px"
+          @change="updateAspectRatio"
+          s
+        >
+          <el-option
+            v-for="item in options"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          >
+          </el-option>
+        </el-select>
+      </div>
+      <div class="cropper-container" style="margin-bottom: 2vh">
+        <VueCropper
+          v-if="image"
+          ref="cropper"
+          :src="image"
+          :view-mode="1"
+          :drag-mode="'crop'"
+          :aspect-ratio="aspectRatio"
+          :auto-crop-area="1"
+          :movable="true"
+          :zoomable="true"
+          :scalable="true"
+          :rotatable="true"
+          :crop-box-movable="true"
+          :crop-box-resizable="true"
+          @cropmove="onCropMove"
+        >
+        </VueCropper>
+      </div>
+      <div>
+        <el-button @click="cropImage">裁剪图片</el-button>
+        <el-button @click="resetCropper">重置裁剪框</el-button>
+      </div>
+      <div v-if="croppedImage">
+        <label>裁剪后的图片：</label>
+        <div class="cropper-container">
+          <img :src="croppedImage" alt="裁剪后的图片" />
         </div>
-    
+      </div>
     </div>
-  </template>
-  
+  </div>
+</template>
+
 <script setup lang="ts">
-import { ref, watch} from 'vue';
-import VueCropper from 'vue-cropperjs';
-import 'cropperjs/dist/cropper.css';
+import { ref, watch, nextTick } from "vue";
+import VueCropper from "vue-cropperjs";
+import "cropperjs/dist/cropper.css";
+import { ElMessage, Options } from "element-plus";
 
-// 设置裁剪器的比例
+// 裁剪器相关
 const aspectRatio = ref<number | string | null>(null); // 默认不限制比例
+const image = ref<string | null>(null); // 存储用户上传的图片
+const croppedImage = ref<string | null>(null); // 裁剪后的图片
+const cropper = ref<any>(null); // 裁剪器实例
 
-// 存储图片路径
-const image = ref<string | null>(null);
-const croppedImage = ref<string | null>(null);
+const value = ref("");
+const options = [
+  {
+    value: "null",
+    label: "自由裁剪",
+  },
+  {
+    value: "1",
+    label: "1:1",
+  },
+  {
+    value: "16/9",
+    label: "16:9",
+  },
+  {
+    value: "1560/1440",
+    label: "1560:1440",
+  },
+];
 
-// 获取裁剪后的图片
-const cropper = ref<any>(null);
+// 处理上传的图片
+const handleBeforeUpload = (file: File) => {
+  const isImage = file.type.startsWith("image/");
+  if (!isImage) {
+    ElMessage.error("只能上传图片文件！");
+    return false;
+  }
+  const reader = new FileReader();
+  // 读取图片后设置到 image
+  reader.onload = async (event: ProgressEvent<FileReader>) => {
+    if (event.target?.result) {
+      image.value = null; // 清空之前的图片
+      await nextTick(); // 等待 DOM 更新，强制 VueCropper 刷新
+      image.value = event.target.result as string; // 设置新图片
+    }
+  };
+  reader.readAsDataURL(file);
+  return false; // 阻止默认上传行为
+};
 
 const cropImage = () => {
   if (cropper.value) {
     // 获取裁剪后的图像并转换为 Base64 格式
     croppedImage.value = cropper.value.getCroppedCanvas().toDataURL();
-  }
-};
-
-// 处理文件选择
-const onFileChange = (event: Event) => {
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (file) {
-    image.value = URL.createObjectURL(file);
   }
 };
 
@@ -93,15 +141,15 @@ const onCropMove = () => {
 
 // 更新裁剪比例
 const updateAspectRatio = () => {
-    console.log("更改比例")
+  console.log(aspectRatio.value);
   switch (aspectRatio.value) {
-    case '1':
+    case "1":
       aspectRatio.value = 1; // 1:1 比例
       break;
-    case '16/9':
+    case "16/9":
       aspectRatio.value = 16 / 9; // 16:9 比例
       break;
-    case '1560/1440':
+    case "1560/1440":
       aspectRatio.value = 1560 / 1440; // 1560x1440 比例
       break;
     default:
@@ -117,16 +165,15 @@ watch(aspectRatio, (newRatio) => {
   }
 });
 </script>
-  
+
 <style scoped>
 .h5-page {
-display: flex;
-flex-direction: column;
-/* align-items: center; */
-/* justify-content: center; */
-height: 100vh;
-background-color: #f0f0f0;
-color: black;
+  display: flex;
+  flex-direction: column;
+  /* align-items: center; */
+  /* justify-content: center; */
+  /* height: 100vh; */
+  background-color: #f0f0f0;
+  color: black;
 }
 </style>
-  

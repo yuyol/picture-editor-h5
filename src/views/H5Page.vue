@@ -1,6 +1,13 @@
 <template>
   <div class="h5-page">
-    <div style="margin: 5vh">
+    <div
+      style="
+        margin-top: 5vh;
+        margin-bottom: 5vh;
+        margin-left: 2vh;
+        margin-right: 2vh;
+      "
+    >
       <!-- 文件选择 -->
       <el-upload
         class="upload-demo"
@@ -16,7 +23,7 @@
       <div style="margin-bottom: 2vh">
         <label for="aspect-ratio">选择裁剪比例:</label>
         <el-select
-          v-model="aspectRatio"
+          v-model="selectedAspectRatio"
           placeholder="选择"
           size="small"
           style="width: 240px"
@@ -76,6 +83,7 @@ const aspectRatio = ref<number | string | null>(null); // 默认不限制比例
 const image = ref<string | null>(null); // 存储用户上传的图片
 const croppedImage = ref<string | null>(null); // 裁剪后的图片
 const cropper = ref<any>(null); // 裁剪器实例
+const selectedAspectRatio = ref("");
 
 const value = ref("");
 const options = [
@@ -84,7 +92,7 @@ const options = [
     label: "自由裁剪",
   },
   {
-    value: "1",
+    value: "1/1",
     label: "1:1",
   },
   {
@@ -140,21 +148,13 @@ const onCropMove = () => {
 };
 
 // 更新裁剪比例
-const updateAspectRatio = () => {
-  console.log(aspectRatio.value);
-  switch (aspectRatio.value) {
-    case "1":
-      aspectRatio.value = 1; // 1:1 比例
-      break;
-    case "16/9":
-      aspectRatio.value = 16 / 9; // 16:9 比例
-      break;
-    case "1560/1440":
-      aspectRatio.value = 1560 / 1440; // 1560x1440 比例
-      break;
-    default:
-      aspectRatio.value = null; // 自由裁剪
-      break;
+const updateAspectRatio = (value: string) => {
+  console.log(value);
+  if (value === null) {
+    aspectRatio.value = null;
+  } else {
+    const [w, h] = value.split("/").map(Number);
+    aspectRatio.value = w / h;
   }
 };
 

@@ -4,8 +4,8 @@
       style="
         margin-top: 5vh;
         margin-bottom: 5vh;
-        margin-left: 2vh;
-        margin-right: 2vh;
+        margin-left: 5vh;
+        margin-right: 5vh;
       "
     >
       <!-- 文件选择 -->
@@ -59,8 +59,21 @@
         </VueCropper>
       </div>
       <div>
-        <el-button @click="cropImage">裁剪图片</el-button>
-        <el-button @click="resetCropper">重置裁剪框</el-button>
+        <div style="margin-bottom: 2vh">
+          <el-button plain type="primary" @click="cropImage"
+            >裁剪图片</el-button
+          >
+          <el-button @click="resetCropper">重置裁剪框</el-button>
+        </div>
+
+        <div>
+          <el-button
+            type="success"
+            @click="downloadImage"
+            :disabled="!croppedImage"
+            >下载图片</el-button
+          >
+        </div>
       </div>
       <div v-if="croppedImage">
         <label>裁剪后的图片：</label>
@@ -156,6 +169,20 @@ const updateAspectRatio = (value: string) => {
     const [w, h] = value.split("/").map(Number);
     aspectRatio.value = w / h;
   }
+};
+
+// 下载裁剪后的图片
+const downloadImage = () => {
+  if (!croppedImage.value) {
+    ElMessage.error("没有可以下载的图片！");
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.href = croppedImage.value;
+  link.download = "cropped-image.png"; // 文件名
+  link.click();
+  ElMessage.success("图片已下载！");
 };
 
 // 监听 aspectRatio 的变化并更新裁剪器

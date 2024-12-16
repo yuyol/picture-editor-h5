@@ -47,6 +47,7 @@
           :view-mode="1"
           :drag-mode="'move'"
           :aspect-ratio="aspectRatio"
+          :initialAspectRatio="2560 / 1440"
           :auto-crop-area="1"
           :movable="true"
           :zoomable="true"
@@ -114,8 +115,8 @@ const options = [
     label: "16:9",
   },
   {
-    value: "1560/1440",
-    label: "1560:1440",
+    value: "2560/1440",
+    label: "2560:1440",
   },
 ];
 

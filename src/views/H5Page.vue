@@ -45,7 +45,7 @@
           ref="cropper"
           :src="image"
           :view-mode="1"
-          :drag-mode="'crop'"
+          :drag-mode="'move'"
           :aspect-ratio="aspectRatio"
           :auto-crop-area="1"
           :movable="true"
@@ -54,7 +54,7 @@
           :rotatable="true"
           :crop-box-movable="true"
           :crop-box-resizable="true"
-          @cropmove="onCropMove"
+          @cropend="onCropEnd"
         >
         </VueCropper>
       </div>
@@ -86,10 +86,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from "vue";
+import { ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import VueCropper from "vue-cropperjs";
 import "cropperjs/dist/cropper.css";
 import { ElMessage, Options } from "element-plus";
+import { throttle } from "lodash";
 
 // 裁剪器相关
 const aspectRatio = ref<number | string | null>(null); // 默认不限制比例
@@ -153,9 +154,15 @@ const resetCropper = () => {
 };
 
 // 实时更新裁剪结果
-const onCropMove = () => {
+// const onCropMove = () => {
+//   if (cropper.value) {
+//     // 获取实时裁剪区域并更新图片
+//     croppedImage.value = cropper.value.getCroppedCanvas().toDataURL();
+//   }
+// };
+
+const onCropEnd = () => {
   if (cropper.value) {
-    // 获取实时裁剪区域并更新图片
     croppedImage.value = cropper.value.getCroppedCanvas().toDataURL();
   }
 };

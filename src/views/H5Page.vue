@@ -74,6 +74,12 @@
             :disabled="!croppedImage"
             >下载图片</el-button
           >
+          <el-button
+            type="info"
+            @click="uploadCroppedImage"
+            :disabled="!croppedImage"
+            >上传图片到后端</el-button
+          >
         </div>
       </div>
       <div v-if="croppedImage">
@@ -92,6 +98,7 @@ import VueCropper from "vue-cropperjs";
 import "cropperjs/dist/cropper.css";
 import { ElMessage, Options } from "element-plus";
 import { throttle } from "lodash";
+import axios from "axios";
 
 // 裁剪器相关
 const aspectRatio = ref<number | string | null>(null); // 默认不限制比例
@@ -99,6 +106,10 @@ const image = ref<string | null>(null); // 存储用户上传的图片
 const croppedImage = ref<string | null>(null); // 裁剪后的图片
 const cropper = ref<any>(null); // 裁剪器实例
 const selectedAspectRatio = ref("");
+
+// 接口配置 (请根据真实地址和参数修改)
+const uploadUrl = "http://172.16.249.17:48080/app-api/label/brushPic";
+const labelMacValue = "F09E9E0C2104"; // 后端要求的参数示例
 
 const value = ref("");
 const options = [
@@ -109,10 +120,6 @@ const options = [
   {
     value: "1/1",
     label: "1:1",
-  },
-  {
-    value: "16/9",
-    label: "16:9",
   },
   {
     value: "2560/1440",
@@ -142,8 +149,24 @@ const handleBeforeUpload = (file: File) => {
 
 const cropImage = () => {
   if (cropper.value) {
-    // 获取裁剪后的图像并转换为 Base64 格式
-    croppedImage.value = cropper.value.getCroppedCanvas().toDataURL();
+    // 强制指定输出为2560x1440分辨率
+    const croppedCanvas = cropper.value.getCroppedCanvas();
+    croppedImage.value = croppedCanvas.toDataURL("image/png");
+  } else {
+    ElMessage.error("请先选择图片！");
+  }
+};
+
+const crop2560x1440Image = () => {
+  if (cropper.value) {
+    // 强制指定输出为2560x1440分辨率
+    const croppedCanvas = cropper.value.getCroppedCanvas({
+      width: 2560,
+      height: 1440,
+    });
+    croppedImage.value = croppedCanvas.toDataURL("image/png");
+  } else {
+    ElMessage.error("请先选择图片！");
   }
 };
 
@@ -191,6 +214,63 @@ const downloadImage = () => {
   link.download = "cropped-image.png"; // 文件名
   link.click();
   ElMessage.success("图片已下载！");
+};
+
+// 将Base64转换为Blob
+function base64ToBlob(base64: string): Blob {
+  const arr = base64.split(",");
+  const mime = arr[0].match(/:(.*?);/)?.[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+}
+
+// 上传裁剪后的图片到后端
+const uploadCroppedImage = async () => {
+  crop2560x1440Image();
+  if (!croppedImage.value) {
+    ElMessage.error("没有可上传的图片！");
+    return;
+  }
+
+  try {
+    // 使用 Image 对象获取分辨率
+    const img = new Image();
+    img.src = croppedImage.value;
+    img.onload = async () => {
+      console.log(`图片分辨率: ${img.width}x${img.height}`);
+
+      // 继续上传逻辑
+      const blob = base64ToBlob(croppedImage.value);
+      const file = new File([blob], "cropped-image.png", { type: "image/png" });
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("labelMac", labelMacValue);
+
+      const response = await axios.post(uploadUrl, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (response.data && response.data.code === 0) {
+        ElMessage.success(`图片上传成功，分辨率: ${img.width}x${img.height}`);
+      } else {
+        ElMessage.error(`图片上传失败: ${response.data.msg || "未知错误"}`);
+      }
+    };
+
+    img.onerror = () => {
+      ElMessage.error("无法读取图片分辨率，请检查图片数据！");
+    };
+  } catch (error: any) {
+    ElMessage.error(`请求失败：${error.message}`);
+  }
 };
 
 // 监听 aspectRatio 的变化并更新裁剪器
